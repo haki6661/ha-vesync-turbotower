@@ -6,6 +6,8 @@ SERVICE_UPDATE_DEVS = "update_devices"
 
 UPDATE_INTERVAL = 60
 UPDATE_INTERVAL_ENERGY = 60 * 60 * 6
+UPDATE_INTERVAL_FRYER_ACTIVE = 15
+AIR_FRYER_ACTIVE_STATUSES = {"cooking", "heating", "pullout"}
 """
 Update interval for DataCoordinator.
 
@@ -17,6 +19,10 @@ total would be 2880.
 
 Using 30 seconds interval gives 8640 for 3 devices which
 exceeds the quota of 7700.
+
+While an air fryer is cooking, only that fryer is polled every 15 seconds (240
+calls/hour), so a finished program shows up quickly. All other devices stay at
+60 seconds. A six-hour program adds about 1080 calls.
 
 Energy history is weekly/monthly/yearly and can be updated a lot more infrequently,
 in this case every 6 hours.

@@ -92,7 +92,10 @@ async def test_entities(hass: HomeAssistant, fryer: VeSyncAirFryerDC111) -> None
 async def test_stop_chamber(hass: HomeAssistant, fryer: VeSyncAirFryerDC111) -> None:
     """Pressing the button ends the program of that chamber."""
     mocked = AsyncMock(return_value=bypass_response()[0])
-    with patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked):
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        patch.object(VeSyncAirFryerDC111, "update", new=AsyncMock()) as update,
+    ):
         await hass.services.async_call(
             "button",
             "press",
@@ -100,6 +103,7 @@ async def test_stop_chamber(hass: HomeAssistant, fryer: VeSyncAirFryerDC111) -> 
             blocking=True,
         )
     mocked.assert_awaited_once_with("endCook", data={"chamber": 1})
+    update.assert_awaited_once()
 
 
 async def test_stop_empty_chamber(
@@ -135,3 +139,44 @@ async def test_unknown_cook_status(
         hass.states.get(_entity_id(hass, "sensor", "chamber_1_status")).state
         == "somethingNew"
     )
+
+
+async def test_fast_polling_while_cooking(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """While a chamber cooks, only the fryer is polled, every 15 seconds."""
+    coordinator = hass.config_entries.async_entries("vesync")[0].runtime_data
+    manager = coordinator.manager
+
+    # chamber 1 is only "ready" (waiting for Start): normal interval
+    coordinator.full_update_time = None
+    await coordinator.async_refresh()
+    assert coordinator.update_interval.total_seconds() == 60
+    full_updates = manager.update_all_devices.await_count
+
+    fryer.state.chambers[1].cook_status = "cooking"
+    with patch.object(VeSyncAirFryerDC111, "update", new=AsyncMock()) as update:
+        await coordinator.async_refresh()
+        update.assert_awaited_once()
+    # fast tick: the other devices were not polled again
+    assert manager.update_all_devices.await_count == full_updates
+    assert coordinator.update_interval.total_seconds() == 15
+
+    fryer.state.chambers[1].cook_status = "standby"
+    with patch.object(VeSyncAirFryerDC111, "update", new=AsyncMock()):
+        await coordinator.async_refresh()
+    assert coordinator.update_interval.total_seconds() == 60
+
+
+async def test_full_update_still_runs_while_cooking(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """All devices are still refreshed once a minute during a long program."""
+    coordinator = hass.config_entries.async_entries("vesync")[0].runtime_data
+    fryer.state.chambers[1].cook_status = "cooking"
+    await coordinator.async_refresh()
+    calls = coordinator.manager.update_all_devices.await_count
+
+    coordinator.full_update_time -= 60
+    await coordinator.async_refresh()
+    assert coordinator.manager.update_all_devices.await_count == calls + 1
