@@ -46,6 +46,14 @@
         "name": "Water tank lifted"
       }
     },
+    "button": {
+      "chamber_1_stop": {
+        "name": "Stop chamber 1"
+      },
+      "chamber_2_stop": {
+        "name": "Stop chamber 2"
+      }
+    },
     "fan": {
       "vesync": {
         "state_attributes": {
