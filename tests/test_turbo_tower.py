@@ -17,6 +17,7 @@ from pyvesync.devices.vesynckitchen import VeSyncAirFryerDC111
 from pyvesync.models.vesync_models import ResponseDeviceDetailsModel
 
 sys.path.insert(0, str(Path(__file__).parent))
+import custom_components.vesync  # noqa: E402, F401  (patch target below)
 from call_json_fryers import (  # noqa: E402
     DEVICE_DETAILS,
     STATUS_READY,
