@@ -9,7 +9,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 
 from pyvesync.device_map import get_device_config
@@ -110,7 +110,7 @@ async def test_stop_empty_chamber(
     mocked = AsyncMock(return_value=response)
     with (
         patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
-        pytest.raises(HomeAssistantError, match="Chamber 2 has no program"),
+        pytest.raises(ServiceValidationError, match="Chamber 2 has no program"),
     ):
         await hass.services.async_call(
             "button",

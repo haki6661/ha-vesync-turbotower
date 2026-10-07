@@ -10,7 +10,7 @@ from pyvesync.device_container import DeviceContainer
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -117,7 +117,9 @@ class VeSyncButtonEntity(VeSyncBaseEntity, ButtonEntity):
         chamber = self.entity_description.chamber
         if not await self.entity_description.press_fn(self.device):
             if self.device.state.chambers[chamber].cook_status == "standby":
-                raise HomeAssistantError(f"Chamber {chamber} has no program to stop.")
+                raise ServiceValidationError(
+                    f"Chamber {chamber} has no program to stop."
+                )
             if self.device.last_response:
                 raise HomeAssistantError(self.device.last_response.message)
             raise HomeAssistantError(f"Unknown error stopping chamber {chamber}.")
