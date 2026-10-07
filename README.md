@@ -30,7 +30,10 @@ possible.
 
 - **Programs cannot be started remotely.** The appliance requires pressing Start on the
   device. Stopping works.
-- Cloud polling every 60 seconds, like core. Status changes can show up to a minute late.
+- Cloud polling every 60 seconds, like core. While a chamber is cooking or preheating,
+  the air fryer alone is polled every 15 seconds, so a finished program shows up within
+  about 15 seconds. Other VeSync devices stay at 60 seconds to protect the daily API quota
+  (3200 + 1500 per device).
 - Tested with one EU device (`CAF-DC111S-AEU`, firmware as of October 2026, °C).
   Statuses during preheat, at program end and with the drawer pulled out are not
   verified yet. Unknown statuses show as `unknown` on the enum sensor instead of failing;
@@ -75,7 +78,7 @@ pytest
   [gnisch](https://github.com/gnisch/ha-vesync-turbotower).
 - `tests/call_json_fryers.py` is taken from [pyvesync](https://github.com/webdjoe/pyvesync)
   (MIT License).
-- This fork adds the stop buttons, hides sensors the Turbo Tower Pro never fills, and
-  makes the status sensor robust against unknown values.
+- This fork adds the stop buttons, faster polling while cooking, hides sensors the Turbo
+  Tower Pro never fills, and makes the status sensor robust against unknown values.
 
 Not affiliated with Cosori, VeSync or Home Assistant.

@@ -124,4 +124,5 @@ class VeSyncButtonEntity(VeSyncBaseEntity, ButtonEntity):
                 raise HomeAssistantError(self.device.last_response.message)
             raise HomeAssistantError(f"Unknown error stopping chamber {chamber}.")
 
-        await self.coordinator.async_request_refresh()
+        await self.device.update()
+        self.coordinator.async_update_listeners()
