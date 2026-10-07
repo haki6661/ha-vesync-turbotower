@@ -1,0 +1,29 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: |
+          pip install pytest-homeassistant-custom-component==0.13.367 \
+            "pyvesync @ https://github.com/gnisch/pyvesync/archive/5ec9157447164cd69938e860c4ec41d56b7a5e63.zip"
+      - name: Run tests
+        run: pytest -v
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: integration
+          ignore: brands
