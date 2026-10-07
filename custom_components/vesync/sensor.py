@@ -55,6 +55,21 @@ def _has_chambers(device: VeSyncBaseDevice) -> bool:
     return is_air_fryer(device) and rgetattr(device, "state.chambers") is not None
 
 
+def _is_single_chamber_air_fryer(device: VeSyncBaseDevice) -> bool:
+    """Check if the device is an air fryer with a single chamber."""
+    return is_air_fryer(device) and not _has_chambers(device)
+
+
+def _cook_status(device: VeSyncBaseDevice) -> str | None:
+    """Return the cook status, or None if the API reports an unknown value."""
+    status = device.state.cook_status.lower()
+    status = AIR_FRYER_MODE_MAP.get(status, status)
+    if status not in AIR_FRYER_MODE_MAP.values():
+        _LOGGER.debug("Unknown air fryer cook status: %s", device.state.cook_status)
+        return None
+    return status
+
+
 SENSORS: tuple[VeSyncSensorEntityDescription, ...] = (
     VeSyncSensorEntityDescription(
         key="filter-life",
@@ -179,9 +194,7 @@ SENSORS: tuple[VeSyncSensorEntityDescription, ...] = (
         key="cook_status",
         translation_key="cook_status",
         device_class=SensorDeviceClass.ENUM,
-        value_fn=lambda device: AIR_FRYER_MODE_MAP.get(
-            device.state.cook_status.lower(), device.state.cook_status.lower()
-        ),
+        value_fn=_cook_status,
         exists_fn=is_air_fryer,
         options=[
             "cooking_end",
@@ -202,7 +215,7 @@ SENSORS: tuple[VeSyncSensorEntityDescription, ...] = (
         use_device_temperature_unit=True,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda device: device.state.current_temp,
-        exists_fn=is_air_fryer,
+        exists_fn=_is_single_chamber_air_fryer,
     ),
     VeSyncSensorEntityDescription(
         key="cook_set_temp",
@@ -227,7 +240,7 @@ SENSORS: tuple[VeSyncSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         value_fn=lambda device: device.state.preheat_set_time,
-        exists_fn=is_air_fryer,
+        exists_fn=_is_single_chamber_air_fryer,
     ),
     VeSyncSensorEntityDescription(
         key="chamber_1_status",
