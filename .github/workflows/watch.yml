@@ -1,0 +1,92 @@
+name: Watch upstream
+
+# Twice a week, so there is always a fresh result before automatic updates
+# on Sunday night. Opens an issue (once per finding) when something changes.
+on:
+  schedule:
+    - cron: "0 5 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+jobs:
+  upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      harness: ${{ steps.check.outputs.harness }}
+      harness_ha: ${{ steps.check.outputs.harness_ha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - id: check
+        name: Check pyvesync and Home Assistant
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python .github/scripts/watch_upstream.py
+      - name: Open issues for news
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_STATE: ${{ steps.check.outputs.pr_state }}
+          CORE_VERSION: ${{ steps.check.outputs.core_version }}
+          CORE_PYVESYNC: ${{ steps.check.outputs.core_pyvesync }}
+          CORE_SUPPORTED: ${{ steps.check.outputs.core_supported }}
+          PYPI_LATEST: ${{ steps.check.outputs.pypi_latest }}
+          PYPI_SUPPORTED: ${{ steps.check.outputs.pypi_supported }}
+        run: |
+          open_once() {
+            if gh issue list --state all --limit 200 --json title -q '.[].title' | grep -qxF "$1"; then
+              echo "already reported: $1"
+            else
+              gh issue create --title "$1" --body "$2"
+            fi
+          }
+          if [ "$PR_STATE" != "open" ]; then
+            open_once "Upstream: pyvesync#552 ist $PR_STATE" \
+              "https://github.com/webdjoe/pyvesync/pull/552 ist nicht mehr offen (Status: $PR_STATE). Prüfen, ob die Turbo-Tower-Unterstützung in pyvesync gelandet ist."
+          fi
+          if [ "$CORE_SUPPORTED" = "true" ]; then
+            open_once "Upstream: Home Assistant $CORE_VERSION kennt den Turbo Tower Pro" \
+              "Home Assistant $CORE_VERSION nutzt pyvesync $CORE_PYVESYNC, und das kennt den CAF-DC111S. Rückkehr zur eingebauten Integration prüfen (HACS-Repo entfernen, neu starten). Achtung: Stop-Knöpfe und schnelles Polling gibt es dort nur, wenn sie eingereicht wurden."
+          elif [ "$PYPI_SUPPORTED" = "true" ]; then
+            open_once "Upstream: pyvesync $PYPI_LATEST kennt den Turbo Tower Pro" \
+              "pyvesync $PYPI_LATEST auf PyPI kennt den CAF-DC111S, Home Assistant $CORE_VERSION nutzt aber noch $CORE_PYVESYNC. Jetzt wäre der Zeitpunkt, Stop-Knöpfe und schnelles Polling bei Home Assistant einzureichen."
+          fi
+      # GitHub disables scheduled workflows after 60 days without repository
+      # activity; re-enabling through the API resets that timer.
+      - name: Keep the schedule alive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/watch.yml/enable"
+
+  compat:
+    needs: upstream
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install newest Home Assistant test harness
+        run: |
+          pip install "pytest-homeassistant-custom-component==${{ needs.upstream.outputs.harness }}" \
+            "pyvesync @ https://github.com/haki6661/pyvesync/archive/5ec9157447164cd69938e860c4ec41d56b7a5e63.zip"
+      - name: Run tests against Home Assistant ${{ needs.upstream.outputs.harness_ha }}
+        run: pytest -v
+      - name: Open issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HA: ${{ needs.upstream.outputs.harness_ha }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Tests schlagen mit Home Assistant $HA fehl"
+          if gh issue list --state all --limit 200 --json title -q '.[].title' | grep -qxF "$title"; then
+            echo "already reported: $title"
+          else
+            gh issue create --title "$title" --body "Die Integration besteht ihre Tests mit Home Assistant $HA nicht. Vor dem nächsten automatischen Update prüfen, sonst lädt VeSync danach evtl. nicht mehr. Lauf: $RUN"
+          fi
