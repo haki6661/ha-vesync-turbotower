@@ -23,8 +23,8 @@
   ],
   "quality_scale": "bronze",
   "requirements": [
-    "pyvesync @ https://github.com/gnisch/pyvesync/archive/5ec9157447164cd69938e860c4ec41d56b7a5e63.zip"
+    "pyvesync @ https://github.com/haki6661/pyvesync/archive/5ec9157447164cd69938e860c4ec41d56b7a5e63.zip"
   ],
-  "version": "2026.9.3.4",
+  "version": "2026.9.3.5",
   "issue_tracker": "https://github.com/haki6661/ha-vesync-turbotower/issues"
 }
