@@ -197,6 +197,32 @@
     "update_devices": {
       "description": "Adds new VeSync devices to Home Assistant.",
       "name": "Update devices"
+    },
+    "prepare_air_fryer_program": {
+      "name": "Prepare air fryer program",
+      "description": "Sets up a cooking program on a chamber of a multi-chamber air fryer. The program only starts after pressing Start on the appliance.",
+      "fields": {
+        "device_id": {
+          "name": "Air fryer",
+          "description": "The air fryer to prepare."
+        },
+        "chamber": {
+          "name": "Chamber",
+          "description": "Chamber 1 or 2."
+        },
+        "temperature": {
+          "name": "Temperature",
+          "description": "Cooking temperature in the unit the appliance is set to."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "Cooking time in minutes."
+        },
+        "mode": {
+          "name": "Mode",
+          "description": "Cooking mode. Only modes confirmed on a real device are supported."
+        }
+      }
     }
   }
 }

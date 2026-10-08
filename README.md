@@ -23,13 +23,29 @@ For each chamber:
 Plus the usual air fryer sensors of the core integration for the active chamber
 (`cooking_status`, `cooking_set_temperature`, `cooking_set_time`).
 
+And an action to set up a program from Home Assistant:
+
+```yaml
+action: vesync.prepare_air_fryer_program
+data:
+  device_id: <your air fryer>
+  chamber: 1
+  temperature: 200   # in the unit the appliance uses
+  minutes: 15
+  mode: AirFry       # only mode confirmed so far
+```
+
+The chamber then shows `ready` and starts when you press Start on the appliance.
+
 The stop buttons make automations like "stop chamber 1 when the meat probe reaches 62 °C"
 possible.
 
 ## Limitations
 
-- **Programs cannot be started remotely.** The appliance requires pressing Start on the
-  device. Stopping works.
+- **Programs cannot be started remotely.** They can be prepared, but the appliance requires
+  pressing Start on the device, a safety lock in the firmware. Stopping works.
+- Only the `AirFry` mode is known. Other modes need their recipe IDs, which can be read
+  from the diagnostics while the mode runs after starting it on the appliance.
 - Cloud polling every 60 seconds, like core. While a chamber is cooking or preheating,
   the air fryer alone is polled every 15 seconds, so a finished program shows up within
   about 15 seconds. Other VeSync devices stay at 60 seconds to protect the daily API quota

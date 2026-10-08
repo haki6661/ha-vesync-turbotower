@@ -10,7 +10,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from pyvesync.device_map import get_device_config
 from pyvesync.devices.vesynckitchen import VeSyncAirFryerDC111
@@ -180,3 +180,66 @@ async def test_full_update_still_runs_while_cooking(
     coordinator.full_update_time -= 60
     await coordinator.async_refresh()
     assert coordinator.manager.update_all_devices.await_count == calls + 1
+
+
+def _device_id(hass: HomeAssistant) -> str:
+    registry = dr.async_get(hass)
+    return next(
+        device.id
+        for device in registry.devices.values()
+        if any(domain == "vesync" for domain, _ in device.identifiers)
+    )
+
+
+async def test_prepare_program(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """The service prepares a program, which then waits for Start on the device."""
+    mocked = AsyncMock(return_value=bypass_response()[0])
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        patch.object(VeSyncAirFryerDC111, "update", new=AsyncMock()) as update,
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_program",
+            {
+                "device_id": _device_id(hass),
+                "chamber": 2,
+                "temperature": 200,
+                "minutes": 15,
+            },
+            blocking=True,
+        )
+    method, kwargs = mocked.await_args.args[0], mocked.await_args.kwargs
+    assert method == "startMultiCook"
+    config = kwargs["data"]["cookConfigs"][0]
+    assert config["chamber"] == 2
+    assert config["cookTemp"] == 200
+    assert config["cookSetTime"] == 900
+    assert config["mode"] == "AirFry"
+    assert kwargs["data"]["readyStart"] is True
+    update.assert_awaited_once()
+
+
+async def test_prepare_program_out_of_range(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """Values the appliance does not accept are rejected before any API call."""
+    mocked = AsyncMock(return_value=bypass_response()[0])
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        pytest.raises(ServiceValidationError, match="temperature must be between"),
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_program",
+            {
+                "device_id": _device_id(hass),
+                "chamber": 1,
+                "temperature": 300,
+                "minutes": 15,
+            },
+            blocking=True,
+        )
+    mocked.assert_not_awaited()

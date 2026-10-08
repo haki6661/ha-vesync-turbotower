@@ -3,6 +3,7 @@
 DOMAIN = "vesync"
 VS_DISCOVERY = "vesync_discovery_{}"
 SERVICE_UPDATE_DEVS = "update_devices"
+SERVICE_PREPARE_AIR_FRYER = "prepare_air_fryer_program"
 
 UPDATE_INTERVAL = 60
 UPDATE_INTERVAL_ENERGY = 60 * 60 * 6
