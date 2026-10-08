@@ -5,13 +5,24 @@ VS_DISCOVERY = "vesync_discovery_{}"
 SERVICE_UPDATE_DEVS = "update_devices"
 SERVICE_PREPARE_AIR_FRYER = "prepare_air_fryer_program"
 
-AIR_FRYER_MODE_LIMITS: dict[str, dict[str, tuple[int, int]]] = {
-    "AirFry": {"celsius": (120, 230), "fahrenheit": (250, 450), "minutes": (1, 60)},
+AIR_FRYER_MODE_LIMITS: dict[str, tuple[int, int, int, int]] = {
+    # mode: (min °C, max °C, min minutes, max minutes)
+    "AirFry": (120, 230, 1, 60),
+    "Bake": (80, 205, 1, 60),
+    "Roast": (175, 230, 1, 60),
+    "Reheat": (40, 205, 1, 60),
+    "Grill": (160, 230, 1, 60),
+    "Dry": (35, 95, 30, 1440),
+    "Proof": (30, 45, 15, 720),
 }
-"""Limits per cooking mode, measured on a CAF-DC111S-AEU on 08.10.2026.
+"""Limits per cooking mode, measured on a CAF-DC111S-AEU on 08.10.2026 in °C.
 
 The appliance rejects programs outside them with API code 11011000, so they are
-checked before the request. Temperatures go in steps of 5.
+checked before the request. It takes every whole degree and minute inside the limits.
+Proof was only probed down to 15 minutes (10 is rejected, 11 to 14 were not tried);
+the same goes for the other lower bounds, which were probed with the values shown.
+The Fahrenheit side was not measured, so nothing is checked when the appliance is set
+to Fahrenheit.
 """
 
 UPDATE_INTERVAL = 60

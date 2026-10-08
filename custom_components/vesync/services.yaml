@@ -20,7 +20,7 @@ prepare_air_fryer_program:
       example: 200
       selector:
         number:
-          min: 40
+          min: 30
           max: 230
           unit_of_measurement: "°C"
           mode: box

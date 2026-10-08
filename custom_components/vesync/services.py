@@ -120,19 +120,16 @@ async def async_prepare_air_fryer_program(call: ServiceCall) -> None:
 
 
 def _validate_program(device: VeSyncBaseDevice, data: dict) -> None:
-    """Check temperature and time against the limits known for the mode."""
+    """Check temperature and time against the limits measured for the mode."""
     limits = AIR_FRYER_MODE_LIMITS.get(data[ATTR_MODE])
-    if limits is None:
+    if limits is None or getattr(device, "temp_unit", "celsius") != "celsius":
         return
-    unit = getattr(device, "temp_unit", "celsius")
-    min_temp, max_temp = limits.get(unit, limits["celsius"])
-    temperature = data[ATTR_TEMPERATURE]
-    if not min_temp <= temperature <= max_temp or temperature % 5:
+    min_temp, max_temp, min_minutes, max_minutes = limits
+    if not min_temp <= data[ATTR_TEMPERATURE] <= max_temp:
         raise ServiceValidationError(
-            f"{data[ATTR_MODE]} takes {min_temp} to {max_temp} degrees "
-            f"in steps of 5, got {temperature}"
+            f"{data[ATTR_MODE]} takes {min_temp} to {max_temp} degrees, "
+            f"got {data[ATTR_TEMPERATURE]}"
         )
-    min_minutes, max_minutes = limits["minutes"]
     if not min_minutes <= data[ATTR_MINUTES] <= max_minutes:
         raise ServiceValidationError(
             f"{data[ATTR_MODE]} takes {min_minutes} to {max_minutes} minutes, "
