@@ -60,6 +60,16 @@ def _is_single_chamber_air_fryer(device: VeSyncBaseDevice) -> bool:
     return is_air_fryer(device) and not _has_chambers(device)
 
 
+CHAMBER_LINK = {0: "none", 1: "match", 2: "sync"}
+"""syncType from the API: 1 is the Match key, 2 the Sync key (read on a CAF-DC111S)."""
+
+
+def _chamber_mode(device: VeSyncBaseDevice, chamber: int) -> str | None:
+    """Return the cooking mode of a chamber with a program, else None."""
+    state = device.state.chambers[chamber]
+    return state.mode if state.is_active else None
+
+
 def _cook_status(device: VeSyncBaseDevice) -> str | None:
     """Return the cook status, or None if the API reports an unknown value."""
     status = device.state.cook_status.lower()
@@ -266,9 +276,29 @@ SENSORS: tuple[VeSyncSensorEntityDescription, ...] = (
         exists_fn=_has_chambers,
     ),
     VeSyncSensorEntityDescription(
+        key="chamber_1_mode",
+        translation_key="chamber_1_mode",
+        value_fn=lambda device: _chamber_mode(device, 1),
+        exists_fn=_has_chambers,
+    ),
+    VeSyncSensorEntityDescription(
         key="chamber_2_status",
         translation_key="chamber_2_status",
         value_fn=lambda device: device.state.chambers[2].cook_status,
+        exists_fn=_has_chambers,
+    ),
+    VeSyncSensorEntityDescription(
+        key="chamber_2_mode",
+        translation_key="chamber_2_mode",
+        value_fn=lambda device: _chamber_mode(device, 2),
+        exists_fn=_has_chambers,
+    ),
+    VeSyncSensorEntityDescription(
+        key="chamber_link",
+        translation_key="chamber_link",
+        device_class=SensorDeviceClass.ENUM,
+        options=["none", "match", "sync"],
+        value_fn=lambda device: CHAMBER_LINK.get(device.state.sync_type),
         exists_fn=_has_chambers,
     ),
     VeSyncSensorEntityDescription(

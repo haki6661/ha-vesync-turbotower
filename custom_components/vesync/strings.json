@@ -165,6 +165,20 @@
       },
       "chamber_2_remaining_time": {
         "name": "Chamber 2 remaining time"
+      },
+      "chamber_1_mode": {
+        "name": "Chamber 1 mode"
+      },
+      "chamber_2_mode": {
+        "name": "Chamber 2 mode"
+      },
+      "chamber_link": {
+        "name": "Chamber link",
+        "state": {
+          "none": "None",
+          "match": "Match",
+          "sync": "Sync"
+        }
       }
     },
     "switch": {

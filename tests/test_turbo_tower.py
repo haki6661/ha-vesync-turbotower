@@ -303,3 +303,55 @@ async def test_prepare_program_rejected(
             },
             blocking=True,
         )
+
+
+async def test_mode_and_link_sensors(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """Mode shows only for a chamber with a program; link maps the sync type."""
+    assert hass.states.get(_entity_id(hass, "sensor", "chamber_1_mode")).state == "AirFry"
+    assert hass.states.get(_entity_id(hass, "sensor", "chamber_2_mode")).state == "unknown"
+    assert hass.states.get(_entity_id(hass, "sensor", "chamber_link")).state == "none"
+
+    fryer.state.sync_type = 2
+    coordinator = hass.config_entries.async_entries("vesync")[0].runtime_data
+    coordinator.async_set_updated_data(None)
+    await hass.async_block_till_done()
+    assert hass.states.get(_entity_id(hass, "sensor", "chamber_link")).state == "sync"
+
+
+async def test_manual_refresh_polls_idle_fryer(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """A refresh between full updates still reads an idle fryer."""
+    coordinator = hass.config_entries.async_entries("vesync")[0].runtime_data
+    coordinator.full_update_time = None
+    await coordinator.async_refresh()
+    fryer.state.chambers[1].cook_status = "standby"
+
+    with patch.object(VeSyncAirFryerDC111, "update", new=AsyncMock()) as update:
+        await coordinator.async_refresh()
+        update.assert_awaited_once()
+
+
+async def test_prepare_bake(hass: HomeAssistant, fryer: VeSyncAirFryerDC111) -> None:
+    """Modes read from the appliance can be prepared with their recipe ID."""
+    mocked = AsyncMock(return_value=bypass_response()[0])
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        patch.object(VeSyncAirFryerDC111, "update", new=AsyncMock()),
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_program",
+            {
+                "device_id": _device_id(hass),
+                "chamber": 1,
+                "temperature": 165,
+                "minutes": 20,
+                "mode": "Bake",
+            },
+            blocking=True,
+        )
+    config = mocked.await_args.kwargs["data"]["cookConfigs"][0]
+    assert (config["mode"], config["recipeId"]) == ("Bake", 9)

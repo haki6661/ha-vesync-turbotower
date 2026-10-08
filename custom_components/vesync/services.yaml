@@ -1,42 +1,47 @@
-update_devices:
-
-prepare_air_fryer_program:
-  fields:
-    device_id:
-      required: true
-      selector:
-        device:
-          integration: vesync
-    chamber:
-      required: true
-      default: 1
-      selector:
-        number:
-          min: 1
-          max: 2
-          mode: box
-    temperature:
-      required: true
-      example: 200
-      selector:
-        number:
-          min: 40
-          max: 230
-          unit_of_measurement: "°C"
-          mode: box
-    minutes:
-      required: true
-      example: 15
-      selector:
-        number:
-          min: 1
-          max: 1440
-          unit_of_measurement: min
-          mode: box
-    mode:
-      default: AirFry
-      selector:
-        select:
-          options:
-            - AirFry
-          custom_value: true
+update_devices:
+
+prepare_air_fryer_program:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: vesync
+    chamber:
+      required: true
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 2
+          mode: box
+    temperature:
+      required: true
+      example: 200
+      selector:
+        number:
+          min: 40
+          max: 230
+          unit_of_measurement: "°C"
+          mode: box
+    minutes:
+      required: true
+      example: 15
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
+          mode: box
+    mode:
+      default: AirFry
+      selector:
+        select:
+          options:
+            - AirFry
+            - Bake
+            - Roast
+            - Reheat
+            - Grill
+            - Dry
+            - Proof
