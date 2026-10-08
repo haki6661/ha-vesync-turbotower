@@ -33,6 +33,11 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 
 class _Devices(list):
     outlets: list = []
+    humidifiers: list = []
+    air_purifiers: list = []
+    fans: list = []
+    bulbs: list = []
+    switches: list = []
 
 
 @pytest.fixture
@@ -186,7 +191,7 @@ def _device_id(hass: HomeAssistant) -> str:
     registry = dr.async_get(hass)
     return next(
         device.id
-        for device in registry.devices.values()
+        for device in registry.devices
         if any(domain == "vesync" for domain, _ in device.identifiers)
     )
 
