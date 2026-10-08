@@ -25,6 +25,6 @@
   "requirements": [
     "pyvesync @ https://github.com/haki6661/pyvesync/archive/20a1080e5f340f8188af160ffae7f5185e6c3879.zip"
   ],
-  "version": "2026.9.3.8",
+  "version": "2026.9.3.9",
   "issue_tracker": "https://github.com/haki6661/ha-vesync-turbotower/issues"
 }

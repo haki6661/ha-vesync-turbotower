@@ -252,7 +252,7 @@ async def test_prepare_program_out_of_range(
 
 @pytest.mark.parametrize(
     ("temperature", "minutes", "message"),
-    [(100, 15, "takes 120 to 230 degrees"), (182, 15, "steps of 5"), (180, 61, "takes 1 to 60 minutes")],
+    [(100, 15, "takes 120 to 230 degrees"), (231, 15, "takes 120 to 230 degrees"), (180, 61, "takes 1 to 60 minutes")],
 )
 async def test_prepare_program_airfry_limits(
     hass: HomeAssistant,
@@ -355,3 +355,84 @@ async def test_prepare_bake(hass: HomeAssistant, fryer: VeSyncAirFryerDC111) -> 
         )
     config = mocked.await_args.kwargs["data"]["cookConfigs"][0]
     assert (config["mode"], config["recipeId"]) == ("Bake", 9)
+
+
+async def test_prepare_program_whole_degrees_and_other_modes(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """Every whole degree inside the limits goes through; limits differ per mode."""
+    mocked = AsyncMock(return_value=bypass_response()[0])
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        patch.object(VeSyncAirFryerDC111, "update", new=AsyncMock()),
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_program",
+            {
+                "device_id": _device_id(hass),
+                "chamber": 1,
+                "temperature": 183,
+                "minutes": 7,
+                "mode": "AirFry",
+            },
+            blocking=True,
+        )
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_program",
+            {
+                "device_id": _device_id(hass),
+                "chamber": 2,
+                "temperature": 33,
+                "minutes": 720,
+                "mode": "Proof",
+            },
+            blocking=True,
+        )
+    temps = [c.kwargs["data"]["cookConfigs"][0]["cookTemp"] for c in mocked.await_args_list]
+    assert temps == [183, 33]
+
+
+@pytest.mark.parametrize(
+    ("mode", "temperature", "minutes", "message"),
+    [
+        ("Bake", 79, 20, "Bake takes 80 to 205"),
+        ("Bake", 206, 20, "Bake takes 80 to 205"),
+        ("Roast", 174, 20, "Roast takes 175 to 230"),
+        ("Reheat", 39, 5, "Reheat takes 40 to 205"),
+        ("Grill", 159, 10, "Grill takes 160 to 230"),
+        ("Dry", 96, 360, "Dry takes 35 to 95"),
+        ("Dry", 55, 29, "Dry takes 30 to 1440 minutes"),
+        ("Dry", 55, 1441, "Dry takes 30 to 1440 minutes"),
+        ("Proof", 46, 60, "Proof takes 30 to 45"),
+        ("Proof", 35, 721, "Proof takes 15 to 720 minutes"),
+    ],
+)
+async def test_prepare_program_mode_limits(
+    hass: HomeAssistant,
+    fryer: VeSyncAirFryerDC111,
+    mode: str,
+    temperature: int,
+    minutes: int,
+    message: str,
+) -> None:
+    """Limits measured on the appliance are checked per mode."""
+    mocked = AsyncMock(return_value=bypass_response()[0])
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        pytest.raises(ServiceValidationError, match=message),
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_program",
+            {
+                "device_id": _device_id(hass),
+                "chamber": 1,
+                "temperature": temperature,
+                "minutes": minutes,
+                "mode": mode,
+            },
+            blocking=True,
+        )
+    mocked.assert_not_awaited()

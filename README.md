@@ -32,7 +32,7 @@ data:
   chamber: 1
   temperature: 200   # in the unit the appliance uses
   minutes: 15
-  mode: AirFry       # only mode confirmed so far
+  mode: AirFry       # AirFry, Bake, Roast, Reheat, Grill, Dry or Proof
 ```
 
 The chamber then shows `ready` and starts when you press Start on the appliance.
@@ -44,9 +44,21 @@ possible.
 
 - **Programs cannot be started remotely.** They can be prepared, but the appliance requires
   pressing Start on the device, a safety lock in the firmware. Stopping works.
-- Only the `AirFry` mode is known: 120–230 °C in steps of 5, 1–60 minutes (measured on
-  the appliance; it rejects anything else). Other modes need their recipe IDs, which can
-  be read from the diagnostics while the mode runs after starting it on the appliance.
+- All seven modes are supported. The limits were measured on one appliance (in °C; every
+  whole degree and minute inside the range is accepted, everything else is rejected):
+
+  | Mode | Temperature | Time |
+  |---|---|---|
+  | `AirFry` | 120–230 °C | 1–60 min |
+  | `Bake` | 80–205 °C | 1–60 min |
+  | `Roast` | 175–230 °C | 1–60 min |
+  | `Reheat` | 40–205 °C | 1–60 min |
+  | `Grill` | 160–230 °C | 1–60 min |
+  | `Dry` | 35–95 °C | 30–1440 min |
+  | `Proof` | 30–45 °C | 15–720 min |
+
+  The lower time limit of `Proof` was only probed down to 15 minutes. Limits are only
+  checked when the appliance is set to Celsius.
 - Cloud polling every 60 seconds, like core. While a chamber is cooking or preheating,
   the air fryer alone is polled every 15 seconds, so a finished program shows up within
   about 15 seconds. Other VeSync devices stay at 60 seconds to protect the daily API quota
