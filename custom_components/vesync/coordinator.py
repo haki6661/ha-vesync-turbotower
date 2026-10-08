@@ -62,7 +62,9 @@ class VeSyncDataCoordinator(DataUpdateCoordinator[None]):
                 self.full_update_time = time.monotonic()
                 await self.manager.update_all_devices()
             else:
-                for fryer in self.active_air_fryers():
+                # Between full updates only air fryers are polled. All of them, not
+                # only the cooking ones, so a manual refresh also picks up a start.
+                for fryer in self.air_fryers():
                     await fryer.update()
 
             if self.should_update_energy():
@@ -88,6 +90,10 @@ class VeSyncDataCoordinator(DataUpdateCoordinator[None]):
             time.monotonic() - self.full_update_time
             >= UPDATE_INTERVAL - UPDATE_INTERVAL_FRYER_ACTIVE / 2
         )
+
+    def air_fryers(self) -> list[VeSyncBaseDevice]:
+        """Return all air fryers."""
+        return [device for device in self.manager.devices if is_air_fryer(device)]
 
     def active_air_fryers(self) -> list[VeSyncBaseDevice]:
         """Return air fryers with a running program."""

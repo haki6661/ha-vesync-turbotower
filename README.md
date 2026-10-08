@@ -83,7 +83,7 @@ Tests run on Linux (Home Assistant does not run on Windows):
 
 ```bash
 pip install pytest-homeassistant-custom-component==0.13.367 \
-  "pyvesync @ https://github.com/haki6661/pyvesync/archive/5ec9157447164cd69938e860c4ec41d56b7a5e63.zip"
+  "pyvesync @ https://github.com/haki6661/pyvesync/archive/20a1080e5f340f8188af160ffae7f5185e6c3879.zip"
 pytest
 ```
 
@@ -92,10 +92,10 @@ pytest
 - Integration code: [Home Assistant core](https://github.com/home-assistant/core)
   `homeassistant/components/vesync`, Apache License 2.0 (see [LICENSE.md](LICENSE.md)).
 - Turbo Tower Pro support in pyvesync and the first version of this fork:
-  [gnisch](https://github.com/gnisch/ha-vesync-turbotower). The pyvesync code is pinned to
-  commit `5ec9157` of gnisch's branch `feat/turbo-tower-pro-dc123`, installed from the
-  mirror [haki6661/pyvesync](https://github.com/haki6661/pyvesync) so installs keep
-  working even if the original branch goes away.
+  [gnisch](https://github.com/gnisch/ha-vesync-turbotower). pyvesync is installed from the
+  mirror [haki6661/pyvesync](https://github.com/haki6661/pyvesync), branch
+  `feat/turbo-tower-pro-dc123`: gnisch's work plus the recipe IDs of all seven modes and
+  the corrected Sync/Match values, read from a real appliance.
 - `tests/call_json_fryers.py` is taken from [pyvesync](https://github.com/webdjoe/pyvesync)
   (MIT License).
 - This fork adds the stop buttons, faster polling while cooking, hides sensors the Turbo

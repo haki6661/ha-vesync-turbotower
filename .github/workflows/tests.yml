@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pytest-homeassistant-custom-component==0.13.367 \
-            "pyvesync @ https://github.com/haki6661/pyvesync/archive/5ec9157447164cd69938e860c4ec41d56b7a5e63.zip"
+            "pyvesync @ https://github.com/haki6661/pyvesync/archive/20a1080e5f340f8188af160ffae7f5185e6c3879.zip"
       - name: Run tests
         run: pytest -v
 
