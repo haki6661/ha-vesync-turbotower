@@ -1,5 +1,6 @@
 """Support for VeSync Services."""
 
+from pyvesync.base_devices.vesyncbasedevice import VeSyncBaseDevice
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntryState
@@ -10,6 +11,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from . import VesyncConfigEntry
 from .const import (
+    AIR_FRYER_MODE_LIMITS,
     DOMAIN,
     SERVICE_PREPARE_AIR_FRYER,
     SERVICE_UPDATE_DEVS,
@@ -95,6 +97,8 @@ async def async_prepare_air_fryer_program(call: ServiceCall) -> None:
             f"{device.device_name} does not support preparing programs"
         )
 
+    _validate_program(device, call.data)
+
     try:
         success = await device.prepare_program(
             call.data[ATTR_CHAMBER],
@@ -106,9 +110,31 @@ async def async_prepare_air_fryer_program(call: ServiceCall) -> None:
         raise ServiceValidationError(str(err)) from err
 
     if not success:
-        if device.last_response:
-            raise HomeAssistantError(device.last_response.message)
-        raise HomeAssistantError("Unknown error preparing the program")
+        raise HomeAssistantError(
+            f"{device.device_name} rejected the program. Check that the drawer "
+            "is closed and the chamber is idle"
+        )
 
     await device.update()
     coordinator.async_update_listeners()
+
+
+def _validate_program(device: VeSyncBaseDevice, data: dict) -> None:
+    """Check temperature and time against the limits known for the mode."""
+    limits = AIR_FRYER_MODE_LIMITS.get(data[ATTR_MODE])
+    if limits is None:
+        return
+    unit = getattr(device, "temp_unit", "celsius")
+    min_temp, max_temp = limits.get(unit, limits["celsius"])
+    temperature = data[ATTR_TEMPERATURE]
+    if not min_temp <= temperature <= max_temp or temperature % 5:
+        raise ServiceValidationError(
+            f"{data[ATTR_MODE]} takes {min_temp} to {max_temp} degrees "
+            f"in steps of 5, got {temperature}"
+        )
+    min_minutes, max_minutes = limits["minutes"]
+    if not min_minutes <= data[ATTR_MINUTES] <= max_minutes:
+        raise ServiceValidationError(
+            f"{data[ATTR_MODE]} takes {min_minutes} to {max_minutes} minutes, "
+            f"got {data[ATTR_MINUTES]}"
+        )

@@ -5,6 +5,15 @@ VS_DISCOVERY = "vesync_discovery_{}"
 SERVICE_UPDATE_DEVS = "update_devices"
 SERVICE_PREPARE_AIR_FRYER = "prepare_air_fryer_program"
 
+AIR_FRYER_MODE_LIMITS: dict[str, dict[str, tuple[int, int]]] = {
+    "AirFry": {"celsius": (120, 230), "fahrenheit": (250, 450), "minutes": (1, 60)},
+}
+"""Limits per cooking mode, measured on a CAF-DC111S-AEU on 08.10.2026.
+
+The appliance rejects programs outside them with API code 11011000, so they are
+checked before the request. Temperatures go in steps of 5.
+"""
+
 UPDATE_INTERVAL = 60
 UPDATE_INTERVAL_ENERGY = 60 * 60 * 6
 UPDATE_INTERVAL_FRYER_ACTIVE = 15

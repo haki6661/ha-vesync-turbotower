@@ -44,8 +44,9 @@ possible.
 
 - **Programs cannot be started remotely.** They can be prepared, but the appliance requires
   pressing Start on the device, a safety lock in the firmware. Stopping works.
-- Only the `AirFry` mode is known. Other modes need their recipe IDs, which can be read
-  from the diagnostics while the mode runs after starting it on the appliance.
+- Only the `AirFry` mode is known: 120–230 °C in steps of 5, 1–60 minutes (measured on
+  the appliance; it rejects anything else). Other modes need their recipe IDs, which can
+  be read from the diagnostics while the mode runs after starting it on the appliance.
 - Cloud polling every 60 seconds, like core. While a chamber is cooking or preheating,
   the air fryer alone is polled every 15 seconds, so a finished program shows up within
   about 15 seconds. Other VeSync devices stay at 60 seconds to protect the daily API quota
