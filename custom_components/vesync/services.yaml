@@ -45,3 +45,79 @@ prepare_air_fryer_program:
             - Grill
             - Dry
             - Proof
+
+prepare_air_fryer_both_chambers:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: vesync
+    sync:
+      default: finish
+      selector:
+        select:
+          translation_key: sync
+          options:
+            - finish
+            - match
+    chamber_1_temperature:
+      required: true
+      example: 190
+      selector:
+        number:
+          min: 30
+          max: 230
+          unit_of_measurement: "°C"
+          mode: box
+    chamber_1_minutes:
+      required: true
+      example: 13
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
+          mode: box
+    chamber_1_mode:
+      default: AirFry
+      selector:
+        select:
+          options:
+            - AirFry
+            - Bake
+            - Roast
+            - Reheat
+            - Grill
+            - Dry
+            - Proof
+    chamber_2_temperature:
+      required: false
+      example: 200
+      selector:
+        number:
+          min: 30
+          max: 230
+          unit_of_measurement: "°C"
+          mode: box
+    chamber_2_minutes:
+      required: false
+      example: 18
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
+          mode: box
+    chamber_2_mode:
+      default: AirFry
+      selector:
+        select:
+          options:
+            - AirFry
+            - Bake
+            - Roast
+            - Reheat
+            - Grill
+            - Dry
+            - Proof

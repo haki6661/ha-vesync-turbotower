@@ -37,6 +37,22 @@ data:
 
 The chamber then shows `ready` and starts when you press Start on the appliance.
 
+Both chambers at once, linked like the Sync or Match key on the panel:
+
+```yaml
+action: vesync.prepare_air_fryer_both_chambers
+data:
+  device_id: <your air fryer>
+  sync: finish              # finish = Sync key (both end together), match = Match key
+  chamber_1_temperature: 190
+  chamber_1_minutes: 13
+  chamber_2_temperature: 200  # not needed for match, chamber 2 copies chamber 1
+  chamber_2_minutes: 18
+  chamber_2_mode: AirFry
+```
+
+With `finish` the shorter program waits so that both end at the same time.
+
 The stop buttons make automations like "stop chamber 1 when the meat probe reaches 62 °C"
 possible.
 

@@ -14,6 +14,7 @@ from .const import (
     AIR_FRYER_MODE_LIMITS,
     DOMAIN,
     SERVICE_PREPARE_AIR_FRYER,
+    SERVICE_PREPARE_AIR_FRYER_BOTH,
     SERVICE_UPDATE_DEVS,
     VS_DEVICES,
     VS_DISCOVERY,
@@ -24,6 +25,10 @@ ATTR_CHAMBER = "chamber"
 ATTR_TEMPERATURE = "temperature"
 ATTR_MINUTES = "minutes"
 ATTR_MODE = "mode"
+ATTR_SYNC = "sync"
+
+SYNC_TYPES = {"finish": 2, "match": 1}
+"""syncType values read from the appliance: Sync key = 2, Match key = 1."""
 
 PREPARE_AIR_FRYER_SCHEMA = vol.Schema(
     {
@@ -32,6 +37,23 @@ PREPARE_AIR_FRYER_SCHEMA = vol.Schema(
         vol.Required(ATTR_TEMPERATURE): vol.All(vol.Coerce(int), vol.Range(min=1)),
         vol.Required(ATTR_MINUTES): vol.All(vol.Coerce(int), vol.Range(min=1)),
         vol.Optional(ATTR_MODE, default="AirFry"): cv.string,
+    }
+)
+
+PREPARE_AIR_FRYER_BOTH_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_DEVICE_ID): cv.string,
+        vol.Optional(ATTR_SYNC, default="finish"): vol.In(list(SYNC_TYPES)),
+        vol.Required("chamber_1_temperature"): vol.All(
+            vol.Coerce(int), vol.Range(min=1)
+        ),
+        vol.Required("chamber_1_minutes"): vol.All(vol.Coerce(int), vol.Range(min=1)),
+        vol.Optional("chamber_1_mode", default="AirFry"): cv.string,
+        vol.Optional("chamber_2_temperature"): vol.All(
+            vol.Coerce(int), vol.Range(min=1)
+        ),
+        vol.Optional("chamber_2_minutes"): vol.All(vol.Coerce(int), vol.Range(min=1)),
+        vol.Optional("chamber_2_mode", default="AirFry"): cv.string,
     }
 )
 
@@ -48,6 +70,12 @@ def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_PREPARE_AIR_FRYER,
         async_prepare_air_fryer_program,
         schema=PREPARE_AIR_FRYER_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_PREPARE_AIR_FRYER_BOTH,
+        async_prepare_air_fryer_both_chambers,
+        schema=PREPARE_AIR_FRYER_BOTH_SCHEMA,
     )
 
 
@@ -70,8 +98,8 @@ async def async_new_device_discovery(call: ServiceCall) -> None:
         async_dispatcher_send(call.hass, VS_DISCOVERY.format(VS_DEVICES), new_devices)
 
 
-async def async_prepare_air_fryer_program(call: ServiceCall) -> None:
-    """Prepare a cooking program; the appliance still needs its Start button."""
+def _find_device(call: ServiceCall) -> tuple:
+    """Return (coordinator, device) for the device_id of a service call."""
 
     device_entry = dr.async_get(call.hass).async_get(call.data[ATTR_DEVICE_ID])
     if device_entry is None:
@@ -91,7 +119,13 @@ async def async_prepare_air_fryer_program(call: ServiceCall) -> None:
         break
     else:
         raise ServiceValidationError("Device is not a loaded VeSync device")
+    return coordinator, device
 
+
+async def async_prepare_air_fryer_program(call: ServiceCall) -> None:
+    """Prepare a cooking program; the appliance still needs its Start button."""
+
+    coordinator, device = _find_device(call)
     if not hasattr(device, "prepare_program"):
         raise ServiceValidationError(
             f"{device.device_name} does not support preparing programs"
@@ -113,6 +147,57 @@ async def async_prepare_air_fryer_program(call: ServiceCall) -> None:
         raise HomeAssistantError(
             f"{device.device_name} rejected the program. Check that the drawer "
             "is closed and the chamber is idle"
+        )
+
+    await device.update()
+    coordinator.async_update_listeners()
+
+
+async def async_prepare_air_fryer_both_chambers(call: ServiceCall) -> None:
+    """Prepare both chambers linked by Sync or Match; Start is still needed.
+
+    Sync (``finish``): each chamber gets its own program and both end together,
+    the shorter one waits. Match: chamber 2 runs the program of chamber 1.
+    """
+
+    coordinator, device = _find_device(call)
+    if not hasattr(device, "prepare_both_chambers"):
+        raise ServiceValidationError(
+            f"{device.device_name} does not support preparing both chambers"
+        )
+
+    data = call.data
+    chamber_1 = {
+        ATTR_TEMPERATURE: data["chamber_1_temperature"],
+        ATTR_MINUTES: data["chamber_1_minutes"],
+        ATTR_MODE: data["chamber_1_mode"],
+    }
+    if data[ATTR_SYNC] == "match":
+        chamber_2 = dict(chamber_1)
+    else:
+        if "chamber_2_temperature" not in data or "chamber_2_minutes" not in data:
+            raise ServiceValidationError(
+                "Sync needs temperature and minutes for chamber 2"
+            )
+        chamber_2 = {
+            ATTR_TEMPERATURE: data["chamber_2_temperature"],
+            ATTR_MINUTES: data["chamber_2_minutes"],
+            ATTR_MODE: data["chamber_2_mode"],
+        }
+    for chamber in (chamber_1, chamber_2):
+        _validate_program(device, chamber)
+
+    try:
+        success = await device.prepare_both_chambers(
+            chamber_1, chamber_2, SYNC_TYPES[data[ATTR_SYNC]]
+        )
+    except ValueError as err:
+        raise ServiceValidationError(str(err)) from err
+
+    if not success:
+        raise HomeAssistantError(
+            f"{device.device_name} rejected the programs. Check that both drawers "
+            "are closed and both chambers are idle"
         )
 
     await device.update()

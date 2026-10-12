@@ -237,6 +237,52 @@
           "description": "Cooking mode. Only modes confirmed on a real device are supported."
         }
       }
+    },
+    "prepare_air_fryer_both_chambers": {
+      "name": "Prepare both air fryer chambers",
+      "description": "Sets up both chambers of a dual-chamber air fryer with Sync (both finish at the same time) or Match (chamber 2 runs the program of chamber 1). The programs only start after pressing Start on the appliance.",
+      "fields": {
+        "device_id": {
+          "name": "Air fryer",
+          "description": "The air fryer to prepare."
+        },
+        "sync": {
+          "name": "Link",
+          "description": "Sync: own program per chamber, both finish together. Match: chamber 2 copies chamber 1."
+        },
+        "chamber_1_temperature": {
+          "name": "Chamber 1 temperature",
+          "description": "Temperature of chamber 1."
+        },
+        "chamber_1_minutes": {
+          "name": "Chamber 1 minutes",
+          "description": "Cooking time of chamber 1."
+        },
+        "chamber_1_mode": {
+          "name": "Chamber 1 mode",
+          "description": "Cooking mode of chamber 1."
+        },
+        "chamber_2_temperature": {
+          "name": "Chamber 2 temperature",
+          "description": "Temperature of chamber 2 (Sync only)."
+        },
+        "chamber_2_minutes": {
+          "name": "Chamber 2 minutes",
+          "description": "Cooking time of chamber 2 (Sync only)."
+        },
+        "chamber_2_mode": {
+          "name": "Chamber 2 mode",
+          "description": "Cooking mode of chamber 2 (Sync only)."
+        }
+      }
+    }
+  },
+  "selector": {
+    "sync": {
+      "options": {
+        "finish": "Sync (finish together)",
+        "match": "Match (same program)"
+      }
     }
   }
 }

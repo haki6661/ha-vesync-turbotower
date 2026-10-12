@@ -436,3 +436,147 @@ async def test_prepare_program_mode_limits(
             blocking=True,
         )
     mocked.assert_not_awaited()
+
+
+async def test_prepare_both_chambers_sync(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """Sync sends one startMultiCook for both chambers, finishing together."""
+    mocked = AsyncMock(return_value=bypass_response()[0])
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        patch.object(VeSyncAirFryerDC111, "update", new=AsyncMock()) as update,
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_both_chambers",
+            {
+                "device_id": _device_id(hass),
+                "chamber_1_temperature": 190,
+                "chamber_1_minutes": 13,
+                "chamber_2_temperature": 200,
+                "chamber_2_minutes": 18,
+                "chamber_2_mode": "Roast",
+            },
+            blocking=True,
+        )
+    mocked.assert_awaited_once()
+    method, data = mocked.await_args.args[0], mocked.await_args.kwargs["data"]
+    assert method == "startMultiCook"
+    assert data["syncType"] == 2
+    assert data["workChamber"] == 4
+    assert data["readyStart"] is True
+    first, second = data["cookConfigs"]
+    assert (first["chamber"], first["cookTemp"], first["cookSetTime"], first["mode"]) == (
+        1,
+        190,
+        780,
+        "AirFry",
+    )
+    assert (
+        second["chamber"],
+        second["cookTemp"],
+        second["cookSetTime"],
+        second["mode"],
+    ) == (2, 200, 1080, "Roast")
+    update.assert_awaited_once()
+
+
+async def test_prepare_both_chambers_match(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """Match copies the program of chamber 1 to chamber 2."""
+    mocked = AsyncMock(return_value=bypass_response()[0])
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        patch.object(VeSyncAirFryerDC111, "update", new=AsyncMock()),
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_both_chambers",
+            {
+                "device_id": _device_id(hass),
+                "sync": "match",
+                "chamber_1_temperature": 180,
+                "chamber_1_minutes": 20,
+                "chamber_1_mode": "Bake",
+            },
+            blocking=True,
+        )
+    data = mocked.await_args.kwargs["data"]
+    assert data["syncType"] == 1
+    first, second = data["cookConfigs"]
+    assert second["chamber"] == 2
+    for key in ("cookTemp", "cookSetTime", "mode"):
+        assert first[key] == second[key]
+
+
+async def test_prepare_both_chambers_sync_needs_chamber_2(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """Sync without a program for chamber 2 is refused before any API call."""
+    mocked = AsyncMock(return_value=bypass_response()[0])
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        pytest.raises(ServiceValidationError, match="chamber 2"),
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_both_chambers",
+            {
+                "device_id": _device_id(hass),
+                "chamber_1_temperature": 190,
+                "chamber_1_minutes": 13,
+            },
+            blocking=True,
+        )
+    mocked.assert_not_awaited()
+
+
+async def test_prepare_both_chambers_limits(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """The measured mode limits apply to each chamber."""
+    mocked = AsyncMock(return_value=bypass_response()[0])
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        pytest.raises(ServiceValidationError, match="takes 1 to 60 minutes"),
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_both_chambers",
+            {
+                "device_id": _device_id(hass),
+                "chamber_1_temperature": 190,
+                "chamber_1_minutes": 13,
+                "chamber_2_temperature": 200,
+                "chamber_2_minutes": 90,
+            },
+            blocking=True,
+        )
+    mocked.assert_not_awaited()
+
+
+async def test_prepare_both_chambers_rejected(
+    hass: HomeAssistant, fryer: VeSyncAirFryerDC111
+) -> None:
+    """A refusal by the appliance gives a readable error."""
+    response = bypass_response()[0]
+    response["result"]["code"] = 11011000
+    mocked = AsyncMock(return_value=response)
+    with (
+        patch.object(VeSyncAirFryerDC111, "call_bypassv2_api", new=mocked),
+        pytest.raises(HomeAssistantError, match="rejected the programs"),
+    ):
+        await hass.services.async_call(
+            "vesync",
+            "prepare_air_fryer_both_chambers",
+            {
+                "device_id": _device_id(hass),
+                "chamber_1_temperature": 190,
+                "chamber_1_minutes": 13,
+                "chamber_2_temperature": 200,
+                "chamber_2_minutes": 18,
+            },
+            blocking=True,
+        )

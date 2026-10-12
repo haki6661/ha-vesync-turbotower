@@ -4,6 +4,7 @@ DOMAIN = "vesync"
 VS_DISCOVERY = "vesync_discovery_{}"
 SERVICE_UPDATE_DEVS = "update_devices"
 SERVICE_PREPARE_AIR_FRYER = "prepare_air_fryer_program"
+SERVICE_PREPARE_AIR_FRYER_BOTH = "prepare_air_fryer_both_chambers"
 
 AIR_FRYER_MODE_LIMITS: dict[str, tuple[int, int, int, int]] = {
     # mode: (min °C, max °C, min minutes, max minutes)
